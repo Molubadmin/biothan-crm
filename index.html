@@ -1,0 +1,285 @@
+<script>
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxRzhBT3wiN9K3IPUNCbD5otGLBfEXG5LtAQh-ryIfS1NZEWCZwk5AFkPssifbQQF58/exec";
+
+  const tableBody = document.getElementById("ordersTable");
+  const detailCard = document.getElementById("detailCard");
+  const statusFilter = document.getElementById("statusFilter");
+  const crmFilter = document.getElementById("crmFilter");
+  const searchInput = document.getElementById("searchInput");
+  const refreshBtn = document.getElementById("refreshBtn");
+  const printTopBtn = document.getElementById("printTopBtn");
+  const printDetailBtn = document.getElementById("printDetailBtn");
+
+  const statTotalOrders = document.getElementById("statTotalOrders");
+  const statFollowUp = document.getElementById("statFollowUp");
+  const statCompleted = document.getElementById("statCompleted");
+  const statAverage = document.getElementById("statAverage");
+  const metricTotal = document.getElementById("metricTotal");
+  const metricPending = document.getElementById("metricPending");
+  const sidebarNewOrders = document.getElementById("sidebarNewOrders");
+  const sidebarUrgent = document.getElementById("sidebarUrgent");
+  const sidebarVisibleTotal = document.getElementById("sidebarVisibleTotal");
+
+  let orders = [];
+  let selectedOrderId = null;
+
+  function loadOrders() {
+    tableBody.innerHTML = '<tr><td colspan="8">Cargando pedidos...</td></tr>';
+
+    const callbackName = "crmCallback_" + Date.now();
+    const script = document.createElement("script");
+    const url = new URL(WEBAPP_URL);
+    url.searchParams.set("action", "list");
+    url.searchParams.set("callback", callbackName);
+    url.searchParams.set("_", Date.now());
+
+    window[callbackName] = function(result) {
+      cleanupJsonp(script, callbackName);
+
+      if (!result || !result.ok) {
+        renderError(result && result.error ? result.error : "No se pudieron cargar los pedidos.");
+        return;
+      }
+
+      orders = (result.data || []).map(normalizeOrder).filter(order => order.id);
+      selectedOrderId = orders[0] ? orders[0].id : null;
+      renderStats();
+      renderTable();
+    };
+
+    script.onerror = function() {
+      cleanupJsonp(script, callbackName);
+      renderError("No fue posible conectar con Apps Script.");
+    };
+
+    script.src = url.toString();
+    document.body.appendChild(script);
+  }
+
+  function cleanupJsonp(script, callbackName) {
+    if (script && script.parentNode) script.parentNode.removeChild(script);
+    try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+  }
+
+  function normalizeOrder(item) {
+    return {
+      id: String(item["# Pedido"] || "").replace("#", "").trim(),
+      pedidoLabel: String(item["# Pedido"] || "").trim(),
+      fecha: String(item["Fecha"] || "").trim(),
+      status: normalizeWooStatus(item["Estado WooCommerce"] || ""),
+      statusLabel: String(item["Estado WooCommerce"] || "").trim(),
+      crm: String(item["Estado CRM"] || "Nuevo").trim(),
+      cliente: String(item["Cliente"] || "").trim(),
+      email: String(item["Email"] || "").trim(),
+      telefono: String(item["Teléfono"] || "").trim(),
+      ubicacion: String(item["Ubicación"] || "").trim(),
+      metodoPago: String(item["Método de pago"] || "").trim(),
+      productos: String(item["Productos"] || "").trim(),
+      subtotal: String(item["Subtotal"] || "").trim(),
+      envio: String(item["Envío"] || "").trim(),
+      total: String(item["Total"] || "").trim(),
+      notaCliente: String(item["Nota del cliente"] || "").trim(),
+      actualizacion: String(item["Última actualización"] || "").trim(),
+      notasInternas: String(item["Notas internas"] || "").trim()
+    };
+  }
+
+  function normalizeWooStatus(status) {
+    const value = String(status || "").toLowerCase().trim();
+    if (value.includes("procesando") || value.includes("processing")) return "processing";
+    if (value.includes("pendiente") || value.includes("pending")) return "pending";
+    if (value.includes("completado") || value.includes("completed")) return "completed";
+    if (value.includes("espera") || value.includes("on-hold") || value.includes("on hold")) return "on-hold";
+    return "pending";
+  }
+
+  function renderStats() {
+    const totalOrders = orders.length;
+    const followUp = orders.filter(order => order.crm === "Contactado" || order.crm === "Incidencia").length;
+    const completed = orders.filter(order => order.status === "completed").length;
+    const pending = orders.filter(order => order.status === "pending" || order.status === "on-hold").length;
+    const totalAmount = orders.reduce((sum, order) => sum + parseMoney(order.total), 0);
+    const average = totalOrders ? totalAmount / totalOrders : 0;
+
+    statTotalOrders.textContent = totalOrders;
+    statFollowUp.textContent = followUp;
+    statCompleted.textContent = completed;
+    statAverage.textContent = formatCurrency(average);
+    metricTotal.textContent = formatCurrency(totalAmount);
+    metricPending.textContent = pending;
+    sidebarNewOrders.textContent = orders.filter(order => order.crm === "Nuevo").length + " pedidos nuevos";
+    sidebarUrgent.textContent = orders.filter(order => order.crm === "Incidencia").length + " requieren seguimiento inmediato.";
+    sidebarVisibleTotal.textContent = formatCurrency(totalAmount);
+  }
+
+  function getFilteredOrders() {
+    const statusValue = statusFilter.value;
+    const crmValue = crmFilter.value;
+    const searchValue = searchInput.value.trim().toLowerCase();
+
+    return orders.filter(order => {
+      const matchStatus = statusValue === "all" || order.status === statusValue;
+      const matchCrm = crmValue === "all" || order.crm === crmValue;
+      const haystack = [
+        order.pedidoLabel,
+        order.cliente,
+        order.telefono,
+        order.email,
+        order.ubicacion,
+        order.productos
+      ].join(" ").toLowerCase();
+
+      const matchSearch = !searchValue || haystack.includes(searchValue);
+      return matchStatus && matchCrm && matchSearch;
+    });
+  }
+
+  function renderTable() {
+    const filtered = getFilteredOrders();
+
+    if (!filtered.length) {
+      tableBody.innerHTML = '<tr><td colspan="8">No hay resultados con esos filtros.</td></tr>';
+      detailCard.innerHTML = '<div class="empty-state">No hay pedidos para mostrar.</div>';
+      return;
+    }
+
+    if (!filtered.some(order => order.id === selectedOrderId)) {
+      selectedOrderId = filtered[0].id;
+    }
+
+    tableBody.innerHTML = filtered.map(order => `
+      <tr data-id="${escapeHtml(order.id)}" class="${order.id === selectedOrderId ? "active" : ""}">
+        <td>
+          <strong>${escapeHtml(order.pedidoLabel)}</strong>
+          <div class="mini-text">${escapeHtml(order.fecha)}</div>
+        </td>
+        <td class="customer-cell">
+          <strong>${escapeHtml(order.cliente || "-")}</strong>
+          <span>${escapeHtml(order.ubicacion || "-")}</span>
+        </td>
+        <td>
+          <strong>${escapeHtml(order.telefono || "-")}</strong>
+          <div class="mini-text">${escapeHtml(order.email || "-")}</div>
+        </td>
+        <td>${escapeHtml(order.productos || "-")}</td>
+        <td><strong>${escapeHtml(order.total || "-")}</strong></td>
+        <td><span class="badge ${sanitizeClass(order.status)}">${escapeHtml(order.statusLabel || "-")}</span></td>
+        <td><span class="badge ${sanitizeClass(order.crm)}">${escapeHtml(order.crm)}</span></td>
+        <td>${escapeHtml(order.actualizacion || "-")}</td>
+      </tr>
+    `).join("");
+
+    document.querySelectorAll("#ordersTable tr[data-id]").forEach(row => {
+      row.addEventListener("click", () => {
+        selectedOrderId = row.dataset.id;
+        renderTable();
+        renderDetail();
+      });
+    });
+
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const order = orders.find(item => item.id === selectedOrderId);
+
+    if (!order) {
+      detailCard.innerHTML = '<div class="empty-state">Selecciona un pedido para ver su informacion completa.</div>';
+      return;
+    }
+
+    const notas = order.notasInternas || order.notaCliente || "Sin notas registradas.";
+
+    detailCard.innerHTML = `
+      <div class="detail-header">
+        <span class="detail-label">Pedido ${escapeHtml(order.pedidoLabel)}</span>
+        <strong class="detail-title">${escapeHtml(order.cliente || "Cliente sin nombre")}</strong>
+        <div class="detail-meta">
+          <span class="badge ${sanitizeClass(order.status)}">${escapeHtml(order.statusLabel || "-")}</span>
+          <span class="badge ${sanitizeClass(order.crm)}">${escapeHtml(order.crm)}</span>
+        </div>
+        <div class="detail-toolbar">
+          <button class="secondary-btn small-btn" type="button" onclick="openPrintView()">Abrir formato de impresion</button>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-box">
+          <span class="detail-label">Contacto</span>
+          <strong>${escapeHtml(order.telefono || "-")}</strong>
+          <div class="mini-text">${escapeHtml(order.email || "-")}</div>
+        </div>
+        <div class="detail-box">
+          <span class="detail-label">Metodo de pago</span>
+          <strong>${escapeHtml(order.metodoPago || "-")}</strong>
+          <div class="mini-text">Total ${escapeHtml(order.total || "-")}</div>
+        </div>
+      </div>
+
+      <ul class="detail-list">
+        <li><span class="mini-text">Fecha</span><strong>${escapeHtml(order.fecha || "-")}</strong></li>
+        <li><span class="mini-text">Ubicacion</span><strong>${escapeHtml(order.ubicacion || "-")}</strong></li>
+        <li><span class="mini-text">Productos</span><strong>${escapeHtml(order.productos || "-")}</strong></li>
+        <li><span class="mini-text">Subtotal / Envio</span><strong>${escapeHtml(order.subtotal || "-")} / ${escapeHtml(order.envio || "-")}</strong></li>
+        <li><span class="mini-text">Ultima actualizacion</span><strong>${escapeHtml(order.actualizacion || "-")}</strong></li>
+      </ul>
+
+      <div class="detail-note">
+        <strong>Notas:</strong> ${escapeHtml(notas)}
+      </div>
+    `;
+  }
+
+  function openPrintView() {
+    const order = orders.find(item => item.id === selectedOrderId);
+    if (!order) {
+      alert("Selecciona un pedido primero.");
+      return;
+    }
+    const url = new URL(WEBAPP_URL);
+    url.searchParams.set("action", "print");
+    url.searchParams.set("id", order.id);
+    window.open(url.toString(), "_blank");
+  }
+
+  function parseMoney(value) {
+    const clean = String(value || "0").replace(/[^0-9.-]+/g, "");
+    const num = parseFloat(clean);
+    return isNaN(num) ? 0 : num;
+  }
+
+  function formatCurrency(value) {
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+      maximumFractionDigits: 2
+    }).format(value || 0);
+  }
+
+  function renderError(message) {
+    tableBody.innerHTML = '<tr><td colspan="8">Error al cargar pedidos: ' + escapeHtml(message) + '</td></tr>';
+    detailCard.innerHTML = '<div class="empty-state">No se pudo cargar la informacion.</div>';
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function sanitizeClass(value) {
+    return String(value || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+  }
+
+  statusFilter.addEventListener("change", renderTable);
+  crmFilter.addEventListener("change", renderTable);
+  searchInput.addEventListener("input", renderTable);
+  refreshBtn.addEventListener("click", loadOrders);
+  printTopBtn.addEventListener("click", openPrintView);
+  printDetailBtn.addEventListener("click", openPrintView);
+
+  loadOrders();
+</script>
