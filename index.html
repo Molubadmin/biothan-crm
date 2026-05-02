@@ -1,285 +1,862 @@
-<script>
-  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxRzhBT3wiN9K3IPUNCbD5otGLBfEXG5LtAQh-ryIfS1NZEWCZwk5AFkPssifbQQF58/exec";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BIOTHAN CRM</title>
+  <meta name="description" content="CRM comercial BIOTHAN con seguimiento e impresion profesional de pedidos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --surface: rgba(255, 255, 255, 0.95);
+      --surface-strong: #ffffff;
+      --text: #111111;
+      --muted: #626262;
+      --line: rgba(0, 0, 0, 0.08);
+      --accent: #3a9900;
+      --accent-strong: #2f7d00;
+      --shadow: 0 18px 42px rgba(0, 0, 0, 0.08);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+    }
 
-  const tableBody = document.getElementById("ordersTable");
-  const detailCard = document.getElementById("detailCard");
-  const statusFilter = document.getElementById("statusFilter");
-  const crmFilter = document.getElementById("crmFilter");
-  const searchInput = document.getElementById("searchInput");
-  const refreshBtn = document.getElementById("refreshBtn");
-  const printTopBtn = document.getElementById("printTopBtn");
-  const printDetailBtn = document.getElementById("printDetailBtn");
+    * { box-sizing: border-box; }
 
-  const statTotalOrders = document.getElementById("statTotalOrders");
-  const statFollowUp = document.getElementById("statFollowUp");
-  const statCompleted = document.getElementById("statCompleted");
-  const statAverage = document.getElementById("statAverage");
-  const metricTotal = document.getElementById("metricTotal");
-  const metricPending = document.getElementById("metricPending");
-  const sidebarNewOrders = document.getElementById("sidebarNewOrders");
-  const sidebarUrgent = document.getElementById("sidebarUrgent");
-  const sidebarVisibleTotal = document.getElementById("sidebarVisibleTotal");
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Manrope", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(58,153,0,.12), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(0,0,0,.045), transparent 24%),
+        linear-gradient(180deg, #f7f7f7 0%, #efefef 100%);
+    }
 
-  let orders = [];
-  let selectedOrderId = null;
+    button, input, select { font: inherit; }
 
-  function loadOrders() {
-    tableBody.innerHTML = '<tr><td colspan="8">Cargando pedidos...</td></tr>';
+    .app-shell {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      min-height: 100vh;
+    }
 
-    const callbackName = "crmCallback_" + Date.now();
-    const script = document.createElement("script");
-    const url = new URL(WEBAPP_URL);
-    url.searchParams.set("action", "list");
-    url.searchParams.set("callback", callbackName);
-    url.searchParams.set("_", Date.now());
+    .sidebar {
+      padding: 30px 24px;
+      background:
+        linear-gradient(180deg, rgba(58,153,0,.18) 0%, transparent 24%),
+        linear-gradient(180deg, #111111 0%, #000000 100%);
+      color: #fff;
+      border-right: 1px solid rgba(255,255,255,.06);
+    }
 
-    window[callbackName] = function(result) {
-      cleanupJsonp(script, callbackName);
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 34px;
+    }
 
-      if (!result || !result.ok) {
-        renderError(result && result.error ? result.error : "No se pudieron cargar los pedidos.");
+    .brand-mark {
+      width: 56px;
+      height: 56px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #3a9900 0%, #60c41a 100%);
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: 800;
+      box-shadow: 0 10px 26px rgba(58,153,0,.28);
+    }
+
+    .brand-label, .eyebrow, .panel-kicker, .stat-title, .sidebar-card-title {
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: .72rem;
+    }
+
+    .brand h1, .topbar h2, .hero-copy h3, .panel-head h3 {
+      margin: 0;
+    }
+
+    .sidebar-nav {
+      display: grid;
+      gap: 10px;
+    }
+
+    .nav-item {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 16px;
+      text-align: left;
+      color: rgba(255,255,255,.82);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .nav-item.active,
+    .nav-item:hover {
+      background: rgba(58,153,0,.18);
+      color: #fff;
+    }
+
+    .sidebar-card, .sidebar-note {
+      margin-top: 24px;
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(58,153,0,.18);
+    }
+
+    .sidebar-card {
+      display: grid;
+      gap: 8px;
+    }
+
+    .sidebar-card span,
+    .sidebar-note p {
+      color: rgba(255,255,255,.75);
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    .main-content {
+      padding: 28px;
+    }
+
+    .topbar, .topbar-actions, .panel-head, .filters, .hero-panel, .detail-meta, .detail-toolbar, .detail-list li {
+      display: flex;
+      align-items: center;
+    }
+
+    .topbar, .panel-head {
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .topbar {
+      margin-bottom: 24px;
+    }
+
+    .topbar-actions, .filters, .detail-meta, .detail-toolbar {
+      gap: 12px;
+    }
+
+    .search-box input, .filters select {
+      min-width: 220px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,.9);
+      outline: none;
+    }
+
+    .primary-btn, .secondary-btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .primary-btn {
+      color: #fff;
+      background: linear-gradient(135deg, #3a9900 0%, #57ba16 100%);
+      box-shadow: 0 10px 22px rgba(58,153,0,.24);
+    }
+
+    .secondary-btn {
+      color: #111;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .small-btn {
+      padding: 11px 14px;
+      font-size: .92rem;
+    }
+
+    .hero-panel, .stat-card, .table-panel, .detail-panel {
+      background: var(--surface);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(0,0,0,.06);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-panel {
+      justify-content: space-between;
+      gap: 24px;
+      padding: 28px;
+      border-radius: var(--radius-xl);
+      margin-bottom: 22px;
+    }
+
+    .hero-copy {
+      max-width: 720px;
+    }
+
+    .hero-copy h3 {
+      margin-top: 8px;
+      font-size: clamp(1.9rem, 3vw, 2.8rem);
+      line-height: 1.03;
+    }
+
+    .hero-copy p:last-child {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .hero-metrics {
+      display: grid;
+      gap: 12px;
+      min-width: 230px;
+    }
+
+    .metric-chip {
+      padding: 20px;
+      border-radius: 20px;
+      color: #fff;
+      background: linear-gradient(135deg, #111111 0%, #3a9900 100%);
+    }
+
+    .metric-chip span, .detail-label {
+      display: block;
+      font-size: .82rem;
+      opacity: .84;
+    }
+
+    .metric-chip strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 1.75rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .stat-card {
+      padding: 22px;
+      border-radius: var(--radius-lg);
+    }
+
+    .stat-card strong {
+      display: block;
+      margin: 10px 0 6px;
+      font-size: 2rem;
+    }
+
+    .stat-card small, .detail-empty, .mini-text {
+      color: var(--muted);
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(360px, .85fr);
+      gap: 20px;
+    }
+
+    .table-panel, .detail-panel {
+      padding: 22px;
+      border-radius: var(--radius-xl);
+    }
+
+    .table-wrap {
+      margin-top: 18px;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      color: var(--muted);
+      font-size: .82rem;
+      font-weight: 700;
+    }
+
+    tbody tr {
+      cursor: pointer;
+    }
+
+    tbody tr:hover,
+    tbody tr.active {
+      background: rgba(58,153,0,.07);
+    }
+
+    .customer-cell strong, .detail-title {
+      display: block;
+    }
+
+    .customer-cell span {
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 700;
+    }
+
+    .badge.processing, .badge.contactado { background: rgba(58,153,0,.12); color: #2f7d00; }
+    .badge.pending, .badge.incidencia { background: rgba(17,17,17,.08); color: #111; }
+    .badge.completed, .badge.confirmado { background: rgba(58,153,0,.16); color: #215d00; }
+    .badge.on-hold, .badge.nuevo { background: rgba(58,153,0,.09); color: #3a9900; }
+
+    .detail-card {
+      margin-top: 18px;
+      min-height: 560px;
+      padding: 24px;
+      border-radius: 24px;
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+    }
+
+    .detail-header {
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .detail-title {
+      margin-top: 8px;
+      font-size: 1.55rem;
+    }
+
+    .detail-toolbar {
+      margin-top: 16px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 18px 0;
+    }
+
+    .detail-box {
+      padding: 16px;
+      border-radius: 18px;
+      background: #fafcf8;
+      border: 1px solid rgba(0,0,0,.05);
+    }
+
+    .detail-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .detail-list li {
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .detail-list li:last-child {
+      border-bottom: 0;
+    }
+
+    .detail-note {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(58,153,0,.1);
+      color: #1f4f00;
+      line-height: 1.65;
+    }
+
+    .empty-state {
+      padding: 22px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    @media (max-width: 1180px) {
+      .stats-grid, .detail-grid { grid-template-columns: 1fr 1fr; }
+      .content-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 920px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .topbar, .topbar-actions, .hero-panel { flex-direction: column; align-items: stretch; }
+      .search-box input, .filters select { min-width: 100%; }
+      .stats-grid, .detail-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .main-content { padding: 18px; }
+      .hero-panel, .table-panel, .detail-panel { padding: 16px; border-radius: 20px; }
+      th, td { padding: 12px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">B</div>
+        <div>
+          <p class="brand-label">CRM Comercial</p>
+          <h1>BIOTHAN</h1>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" type="button">Dashboard</button>
+        <button class="nav-item" type="button">Pedidos</button>
+        <button class="nav-item" type="button">Seguimiento</button>
+        <button class="nav-item" type="button">Clientes</button>
+        <button class="nav-item" type="button">Impresion</button>
+      </nav>
+
+      <div class="sidebar-card">
+        <p class="sidebar-card-title">Estado del dia</p>
+        <strong id="sidebarNewOrders">0 pedidos nuevos</strong>
+        <span id="sidebarUrgent">0 requieren seguimiento inmediato.</span>
+      </div>
+
+      <div class="sidebar-card">
+        <p class="sidebar-card-title">Total visible</p>
+        <strong id="sidebarVisibleTotal">$0 MXN</strong>
+        <span>Importe acumulado en pedidos cargados.</span>
+      </div>
+
+      <div class="sidebar-note">
+        <p>Selecciona un pedido y usa <strong>Generar PDF</strong> para abrir el formato profesional de impresion.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Operacion comercial</p>
+          <h2>Panel de pedidos, seguimiento y formato PDF</h2>
+        </div>
+
+        <div class="topbar-actions">
+          <label class="search-box">
+            <input id="searchInput" type="text" placeholder="Buscar por cliente, pedido, telefono o ciudad">
+          </label>
+          <button id="refreshBtn" class="secondary-btn" type="button">Actualizar</button>
+          <button id="printTopBtn" class="primary-btn" type="button">Generar PDF</button>
+        </div>
+      </header>
+
+      <section class="hero-panel">
+        <div class="hero-copy">
+          <p class="eyebrow">Vista ejecutiva</p>
+          <h3>CRM sobrio, profesional y listo para operar pedidos sin depender del panel de WordPress</h3>
+          <p>Consulta pedidos, filtra por estado y abre una ficha premium para imprimir o guardar como PDF del pedido seleccionado.</p>
+        </div>
+        <div class="hero-metrics">
+          <div class="metric-chip">
+            <span>Importe total</span>
+            <strong id="metricTotal">$0</strong>
+          </div>
+          <div class="metric-chip">
+            <span>Pendientes</span>
+            <strong id="metricPending">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-grid">
+        <article class="stat-card">
+          <span class="stat-title">Pedidos totales</span>
+          <strong id="statTotalOrders">0</strong>
+          <small>Registros cargados</small>
+        </article>
+        <article class="stat-card">
+          <span class="stat-title">En seguimiento</span>
+          <strong id="statFollowUp">0</strong>
+          <small>Contactado o incidencia</small>
+        </article>
+        <article class="stat-card">
+          <span class="stat-title">Completados</span>
+          <strong id="statCompleted">0</strong>
+          <small>Pedidos cerrados</small>
+        </article>
+        <article class="stat-card">
+          <span class="stat-title">Ticket promedio</span>
+          <strong id="statAverage">$0</strong>
+          <small>Promedio por pedido</small>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <div class="table-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">Pedidos recientes</p>
+              <h3>Centro de operaciones</h3>
+            </div>
+
+            <div class="filters">
+              <select id="statusFilter">
+                <option value="all">Todos los estados</option>
+                <option value="processing">Processing</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+                <option value="on-hold">On hold</option>
+              </select>
+
+              <select id="crmFilter">
+                <option value="all">Todo CRM</option>
+                <option value="Nuevo">Nuevo</option>
+                <option value="Contactado">Contactado</option>
+                <option value="Confirmado">Confirmado</option>
+                <option value="Incidencia">Incidencia</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Pedido</th>
+                  <th>Cliente</th>
+                  <th>Contacto</th>
+                  <th>Productos</th>
+                  <th>Total</th>
+                  <th>WooCommerce</th>
+                  <th>CRM</th>
+                  <th>Actualizacion</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTable">
+                <tr><td colspan="8">Cargando pedidos...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <aside class="detail-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">Detalle del pedido</p>
+              <h3>Ficha operativa</h3>
+            </div>
+            <button id="printDetailBtn" class="primary-btn small-btn" type="button">Generar PDF</button>
+          </div>
+
+          <div id="detailCard" class="detail-card">
+            <p class="detail-empty">Selecciona un pedido para ver su informacion completa.</p>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxRzhBT3wiN9K3IPUNCbD5otGLBfEXG5LtAQh-ryIfS1NZEWCZwk5AFkPssifbQQF58/exec";
+
+    const tableBody = document.getElementById("ordersTable");
+    const detailCard = document.getElementById("detailCard");
+    const statusFilter = document.getElementById("statusFilter");
+    const crmFilter = document.getElementById("crmFilter");
+    const searchInput = document.getElementById("searchInput");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const printTopBtn = document.getElementById("printTopBtn");
+    const printDetailBtn = document.getElementById("printDetailBtn");
+
+    const statTotalOrders = document.getElementById("statTotalOrders");
+    const statFollowUp = document.getElementById("statFollowUp");
+    const statCompleted = document.getElementById("statCompleted");
+    const statAverage = document.getElementById("statAverage");
+    const metricTotal = document.getElementById("metricTotal");
+    const metricPending = document.getElementById("metricPending");
+    const sidebarNewOrders = document.getElementById("sidebarNewOrders");
+    const sidebarUrgent = document.getElementById("sidebarUrgent");
+    const sidebarVisibleTotal = document.getElementById("sidebarVisibleTotal");
+
+    let orders = [];
+    let selectedOrderId = null;
+
+    function loadOrders() {
+      tableBody.innerHTML = '<tr><td colspan="8">Cargando pedidos...</td></tr>';
+
+      const callbackName = "crmCallback_" + Date.now();
+      const script = document.createElement("script");
+      const url = new URL(WEBAPP_URL);
+      url.searchParams.set("action", "list");
+      url.searchParams.set("callback", callbackName);
+      url.searchParams.set("_", Date.now());
+
+      window[callbackName] = function(result) {
+        cleanupJsonp(script, callbackName);
+
+        if (!result || !result.ok) {
+          renderError(result && result.error ? result.error : "No se pudieron cargar los pedidos.");
+          return;
+        }
+
+        orders = (result.data || []).map(normalizeOrder).filter(order => order.id);
+        selectedOrderId = orders[0] ? orders[0].id : null;
+        renderStats();
+        renderTable();
+      };
+
+      script.onerror = function() {
+        cleanupJsonp(script, callbackName);
+        renderError("No fue posible conectar con Apps Script.");
+      };
+
+      script.src = url.toString();
+      document.body.appendChild(script);
+    }
+
+    function cleanupJsonp(script, callbackName) {
+      if (script && script.parentNode) script.parentNode.removeChild(script);
+      try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+    }
+
+    function normalizeOrder(item) {
+      return {
+        id: String(item["# Pedido"] || "").replace("#", "").trim(),
+        pedidoLabel: String(item["# Pedido"] || "").trim(),
+        fecha: String(item["Fecha"] || "").trim(),
+        status: normalizeWooStatus(item["Estado WooCommerce"] || ""),
+        statusLabel: String(item["Estado WooCommerce"] || "").trim(),
+        crm: String(item["Estado CRM"] || "Nuevo").trim(),
+        cliente: String(item["Cliente"] || "").trim(),
+        email: String(item["Email"] || "").trim(),
+        telefono: String(item["Teléfono"] || "").trim(),
+        ubicacion: String(item["Ubicación"] || "").trim(),
+        metodoPago: String(item["Método de pago"] || "").trim(),
+        productos: String(item["Productos"] || "").trim(),
+        subtotal: String(item["Subtotal"] || "").trim(),
+        envio: String(item["Envío"] || "").trim(),
+        total: String(item["Total"] || "").trim(),
+        notaCliente: String(item["Nota del cliente"] || "").trim(),
+        actualizacion: String(item["Última actualización"] || "").trim(),
+        notasInternas: String(item["Notas internas"] || "").trim()
+      };
+    }
+
+    function normalizeWooStatus(status) {
+      const value = String(status || "").toLowerCase().trim();
+      if (value.includes("procesando") || value.includes("processing")) return "processing";
+      if (value.includes("pendiente") || value.includes("pending")) return "pending";
+      if (value.includes("completado") || value.includes("completed")) return "completed";
+      if (value.includes("espera") || value.includes("on-hold") || value.includes("on hold")) return "on-hold";
+      return "pending";
+    }
+
+    function renderStats() {
+      const totalOrders = orders.length;
+      const followUp = orders.filter(order => order.crm === "Contactado" || order.crm === "Incidencia").length;
+      const completed = orders.filter(order => order.status === "completed").length;
+      const pending = orders.filter(order => order.status === "pending" || order.status === "on-hold").length;
+      const totalAmount = orders.reduce((sum, order) => sum + parseMoney(order.total), 0);
+      const average = totalOrders ? totalAmount / totalOrders : 0;
+
+      statTotalOrders.textContent = totalOrders;
+      statFollowUp.textContent = followUp;
+      statCompleted.textContent = completed;
+      statAverage.textContent = formatCurrency(average);
+      metricTotal.textContent = formatCurrency(totalAmount);
+      metricPending.textContent = pending;
+      sidebarNewOrders.textContent = orders.filter(order => order.crm === "Nuevo").length + " pedidos nuevos";
+      sidebarUrgent.textContent = orders.filter(order => order.crm === "Incidencia").length + " requieren seguimiento inmediato.";
+      sidebarVisibleTotal.textContent = formatCurrency(totalAmount);
+    }
+
+    function getFilteredOrders() {
+      const statusValue = statusFilter.value;
+      const crmValue = crmFilter.value;
+      const searchValue = searchInput.value.trim().toLowerCase();
+
+      return orders.filter(order => {
+        const matchStatus = statusValue === "all" || order.status === statusValue;
+        const matchCrm = crmValue === "all" || order.crm === crmValue;
+        const haystack = [
+          order.pedidoLabel,
+          order.cliente,
+          order.telefono,
+          order.email,
+          order.ubicacion,
+          order.productos
+        ].join(" ").toLowerCase();
+
+        const matchSearch = !searchValue || haystack.includes(searchValue);
+        return matchStatus && matchCrm && matchSearch;
+      });
+    }
+
+    function renderTable() {
+      const filtered = getFilteredOrders();
+
+      if (!filtered.length) {
+        tableBody.innerHTML = '<tr><td colspan="8">No hay resultados con esos filtros.</td></tr>';
+        detailCard.innerHTML = '<div class="empty-state">No hay pedidos para mostrar.</div>';
         return;
       }
 
-      orders = (result.data || []).map(normalizeOrder).filter(order => order.id);
-      selectedOrderId = orders[0] ? orders[0].id : null;
-      renderStats();
-      renderTable();
-    };
+      if (!filtered.some(order => order.id === selectedOrderId)) {
+        selectedOrderId = filtered[0].id;
+      }
 
-    script.onerror = function() {
-      cleanupJsonp(script, callbackName);
-      renderError("No fue posible conectar con Apps Script.");
-    };
+      tableBody.innerHTML = filtered.map(order => `
+        <tr data-id="${escapeHtml(order.id)}" class="${order.id === selectedOrderId ? "active" : ""}">
+          <td>
+            <strong>${escapeHtml(order.pedidoLabel)}</strong>
+            <div class="mini-text">${escapeHtml(order.fecha)}</div>
+          </td>
+          <td class="customer-cell">
+            <strong>${escapeHtml(order.cliente || "-")}</strong>
+            <span>${escapeHtml(order.ubicacion || "-")}</span>
+          </td>
+          <td>
+            <strong>${escapeHtml(order.telefono || "-")}</strong>
+            <div class="mini-text">${escapeHtml(order.email || "-")}</div>
+          </td>
+          <td>${escapeHtml(order.productos || "-")}</td>
+          <td><strong>${escapeHtml(order.total || "-")}</strong></td>
+          <td><span class="badge ${sanitizeClass(order.status)}">${escapeHtml(order.statusLabel || "-")}</span></td>
+          <td><span class="badge ${sanitizeClass(order.crm)}">${escapeHtml(order.crm)}</span></td>
+          <td>${escapeHtml(order.actualizacion || "-")}</td>
+        </tr>
+      `).join("");
 
-    script.src = url.toString();
-    document.body.appendChild(script);
-  }
-
-  function cleanupJsonp(script, callbackName) {
-    if (script && script.parentNode) script.parentNode.removeChild(script);
-    try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
-  }
-
-  function normalizeOrder(item) {
-    return {
-      id: String(item["# Pedido"] || "").replace("#", "").trim(),
-      pedidoLabel: String(item["# Pedido"] || "").trim(),
-      fecha: String(item["Fecha"] || "").trim(),
-      status: normalizeWooStatus(item["Estado WooCommerce"] || ""),
-      statusLabel: String(item["Estado WooCommerce"] || "").trim(),
-      crm: String(item["Estado CRM"] || "Nuevo").trim(),
-      cliente: String(item["Cliente"] || "").trim(),
-      email: String(item["Email"] || "").trim(),
-      telefono: String(item["Teléfono"] || "").trim(),
-      ubicacion: String(item["Ubicación"] || "").trim(),
-      metodoPago: String(item["Método de pago"] || "").trim(),
-      productos: String(item["Productos"] || "").trim(),
-      subtotal: String(item["Subtotal"] || "").trim(),
-      envio: String(item["Envío"] || "").trim(),
-      total: String(item["Total"] || "").trim(),
-      notaCliente: String(item["Nota del cliente"] || "").trim(),
-      actualizacion: String(item["Última actualización"] || "").trim(),
-      notasInternas: String(item["Notas internas"] || "").trim()
-    };
-  }
-
-  function normalizeWooStatus(status) {
-    const value = String(status || "").toLowerCase().trim();
-    if (value.includes("procesando") || value.includes("processing")) return "processing";
-    if (value.includes("pendiente") || value.includes("pending")) return "pending";
-    if (value.includes("completado") || value.includes("completed")) return "completed";
-    if (value.includes("espera") || value.includes("on-hold") || value.includes("on hold")) return "on-hold";
-    return "pending";
-  }
-
-  function renderStats() {
-    const totalOrders = orders.length;
-    const followUp = orders.filter(order => order.crm === "Contactado" || order.crm === "Incidencia").length;
-    const completed = orders.filter(order => order.status === "completed").length;
-    const pending = orders.filter(order => order.status === "pending" || order.status === "on-hold").length;
-    const totalAmount = orders.reduce((sum, order) => sum + parseMoney(order.total), 0);
-    const average = totalOrders ? totalAmount / totalOrders : 0;
-
-    statTotalOrders.textContent = totalOrders;
-    statFollowUp.textContent = followUp;
-    statCompleted.textContent = completed;
-    statAverage.textContent = formatCurrency(average);
-    metricTotal.textContent = formatCurrency(totalAmount);
-    metricPending.textContent = pending;
-    sidebarNewOrders.textContent = orders.filter(order => order.crm === "Nuevo").length + " pedidos nuevos";
-    sidebarUrgent.textContent = orders.filter(order => order.crm === "Incidencia").length + " requieren seguimiento inmediato.";
-    sidebarVisibleTotal.textContent = formatCurrency(totalAmount);
-  }
-
-  function getFilteredOrders() {
-    const statusValue = statusFilter.value;
-    const crmValue = crmFilter.value;
-    const searchValue = searchInput.value.trim().toLowerCase();
-
-    return orders.filter(order => {
-      const matchStatus = statusValue === "all" || order.status === statusValue;
-      const matchCrm = crmValue === "all" || order.crm === crmValue;
-      const haystack = [
-        order.pedidoLabel,
-        order.cliente,
-        order.telefono,
-        order.email,
-        order.ubicacion,
-        order.productos
-      ].join(" ").toLowerCase();
-
-      const matchSearch = !searchValue || haystack.includes(searchValue);
-      return matchStatus && matchCrm && matchSearch;
-    });
-  }
-
-  function renderTable() {
-    const filtered = getFilteredOrders();
-
-    if (!filtered.length) {
-      tableBody.innerHTML = '<tr><td colspan="8">No hay resultados con esos filtros.</td></tr>';
-      detailCard.innerHTML = '<div class="empty-state">No hay pedidos para mostrar.</div>';
-      return;
-    }
-
-    if (!filtered.some(order => order.id === selectedOrderId)) {
-      selectedOrderId = filtered[0].id;
-    }
-
-    tableBody.innerHTML = filtered.map(order => `
-      <tr data-id="${escapeHtml(order.id)}" class="${order.id === selectedOrderId ? "active" : ""}">
-        <td>
-          <strong>${escapeHtml(order.pedidoLabel)}</strong>
-          <div class="mini-text">${escapeHtml(order.fecha)}</div>
-        </td>
-        <td class="customer-cell">
-          <strong>${escapeHtml(order.cliente || "-")}</strong>
-          <span>${escapeHtml(order.ubicacion || "-")}</span>
-        </td>
-        <td>
-          <strong>${escapeHtml(order.telefono || "-")}</strong>
-          <div class="mini-text">${escapeHtml(order.email || "-")}</div>
-        </td>
-        <td>${escapeHtml(order.productos || "-")}</td>
-        <td><strong>${escapeHtml(order.total || "-")}</strong></td>
-        <td><span class="badge ${sanitizeClass(order.status)}">${escapeHtml(order.statusLabel || "-")}</span></td>
-        <td><span class="badge ${sanitizeClass(order.crm)}">${escapeHtml(order.crm)}</span></td>
-        <td>${escapeHtml(order.actualizacion || "-")}</td>
-      </tr>
-    `).join("");
-
-    document.querySelectorAll("#ordersTable tr[data-id]").forEach(row => {
-      row.addEventListener("click", () => {
-        selectedOrderId = row.dataset.id;
-        renderTable();
-        renderDetail();
+      document.querySelectorAll("#ordersTable tr[data-id]").forEach(row => {
+        row.addEventListener("click", () => {
+          selectedOrderId = row.dataset.id;
+          renderTable();
+          renderDetail();
+        });
       });
-    });
 
-    renderDetail();
-  }
-
-  function renderDetail() {
-    const order = orders.find(item => item.id === selectedOrderId);
-
-    if (!order) {
-      detailCard.innerHTML = '<div class="empty-state">Selecciona un pedido para ver su informacion completa.</div>';
-      return;
+      renderDetail();
     }
 
-    const notas = order.notasInternas || order.notaCliente || "Sin notas registradas.";
+    function renderDetail() {
+      const order = orders.find(item => item.id === selectedOrderId);
 
-    detailCard.innerHTML = `
-      <div class="detail-header">
-        <span class="detail-label">Pedido ${escapeHtml(order.pedidoLabel)}</span>
-        <strong class="detail-title">${escapeHtml(order.cliente || "Cliente sin nombre")}</strong>
-        <div class="detail-meta">
-          <span class="badge ${sanitizeClass(order.status)}">${escapeHtml(order.statusLabel || "-")}</span>
-          <span class="badge ${sanitizeClass(order.crm)}">${escapeHtml(order.crm)}</span>
+      if (!order) {
+        detailCard.innerHTML = '<div class="empty-state">Selecciona un pedido para ver su informacion completa.</div>';
+        return;
+      }
+
+      const notas = order.notasInternas || order.notaCliente || "Sin notas registradas.";
+
+      detailCard.innerHTML = `
+        <div class="detail-header">
+          <span class="detail-label">Pedido ${escapeHtml(order.pedidoLabel)}</span>
+          <strong class="detail-title">${escapeHtml(order.cliente || "Cliente sin nombre")}</strong>
+          <div class="detail-meta">
+            <span class="badge ${sanitizeClass(order.status)}">${escapeHtml(order.statusLabel || "-")}</span>
+            <span class="badge ${sanitizeClass(order.crm)}">${escapeHtml(order.crm)}</span>
+          </div>
+          <div class="detail-toolbar">
+            <button class="secondary-btn small-btn" type="button" onclick="openPrintView()">Abrir formato de impresion</button>
+          </div>
         </div>
-        <div class="detail-toolbar">
-          <button class="secondary-btn small-btn" type="button" onclick="openPrintView()">Abrir formato de impresion</button>
+
+        <div class="detail-grid">
+          <div class="detail-box">
+            <span class="detail-label">Contacto</span>
+            <strong>${escapeHtml(order.telefono || "-")}</strong>
+            <div class="mini-text">${escapeHtml(order.email || "-")}</div>
+          </div>
+          <div class="detail-box">
+            <span class="detail-label">Metodo de pago</span>
+            <strong>${escapeHtml(order.metodoPago || "-")}</strong>
+            <div class="mini-text">Total ${escapeHtml(order.total || "-")}</div>
+          </div>
         </div>
-      </div>
 
-      <div class="detail-grid">
-        <div class="detail-box">
-          <span class="detail-label">Contacto</span>
-          <strong>${escapeHtml(order.telefono || "-")}</strong>
-          <div class="mini-text">${escapeHtml(order.email || "-")}</div>
+        <ul class="detail-list">
+          <li><span class="mini-text">Fecha</span><strong>${escapeHtml(order.fecha || "-")}</strong></li>
+          <li><span class="mini-text">Ubicacion</span><strong>${escapeHtml(order.ubicacion || "-")}</strong></li>
+          <li><span class="mini-text">Productos</span><strong>${escapeHtml(order.productos || "-")}</strong></li>
+          <li><span class="mini-text">Subtotal / Envio</span><strong>${escapeHtml(order.subtotal || "-")} / ${escapeHtml(order.envio || "-")}</strong></li>
+          <li><span class="mini-text">Ultima actualizacion</span><strong>${escapeHtml(order.actualizacion || "-")}</strong></li>
+        </ul>
+
+        <div class="detail-note">
+          <strong>Notas:</strong> ${escapeHtml(notas)}
         </div>
-        <div class="detail-box">
-          <span class="detail-label">Metodo de pago</span>
-          <strong>${escapeHtml(order.metodoPago || "-")}</strong>
-          <div class="mini-text">Total ${escapeHtml(order.total || "-")}</div>
-        </div>
-      </div>
-
-      <ul class="detail-list">
-        <li><span class="mini-text">Fecha</span><strong>${escapeHtml(order.fecha || "-")}</strong></li>
-        <li><span class="mini-text">Ubicacion</span><strong>${escapeHtml(order.ubicacion || "-")}</strong></li>
-        <li><span class="mini-text">Productos</span><strong>${escapeHtml(order.productos || "-")}</strong></li>
-        <li><span class="mini-text">Subtotal / Envio</span><strong>${escapeHtml(order.subtotal || "-")} / ${escapeHtml(order.envio || "-")}</strong></li>
-        <li><span class="mini-text">Ultima actualizacion</span><strong>${escapeHtml(order.actualizacion || "-")}</strong></li>
-      </ul>
-
-      <div class="detail-note">
-        <strong>Notas:</strong> ${escapeHtml(notas)}
-      </div>
-    `;
-  }
-
-  function openPrintView() {
-    const order = orders.find(item => item.id === selectedOrderId);
-    if (!order) {
-      alert("Selecciona un pedido primero.");
-      return;
+      `;
     }
-    const url = new URL(WEBAPP_URL);
-    url.searchParams.set("action", "print");
-    url.searchParams.set("id", order.id);
-    window.open(url.toString(), "_blank");
-  }
 
-  function parseMoney(value) {
-    const clean = String(value || "0").replace(/[^0-9.-]+/g, "");
-    const num = parseFloat(clean);
-    return isNaN(num) ? 0 : num;
-  }
+    function openPrintView() {
+      const order = orders.find(item => item.id === selectedOrderId);
+      if (!order) {
+        alert("Selecciona un pedido primero.");
+        return;
+      }
+      const url = new URL(WEBAPP_URL);
+      url.searchParams.set("action", "print");
+      url.searchParams.set("id", order.id);
+      window.open(url.toString(), "_blank");
+    }
 
-  function formatCurrency(value) {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-      maximumFractionDigits: 2
-    }).format(value || 0);
-  }
+    function parseMoney(value) {
+      const clean = String(value || "0").replace(/[^0-9.-]+/g, "");
+      const num = parseFloat(clean);
+      return isNaN(num) ? 0 : num;
+    }
 
-  function renderError(message) {
-    tableBody.innerHTML = '<tr><td colspan="8">Error al cargar pedidos: ' + escapeHtml(message) + '</td></tr>';
-    detailCard.innerHTML = '<div class="empty-state">No se pudo cargar la informacion.</div>';
-  }
+    function formatCurrency(value) {
+      return new Intl.NumberFormat("es-MX", {
+        style: "currency",
+        currency: "MXN",
+        maximumFractionDigits: 2
+      }).format(value || 0);
+    }
 
-  function escapeHtml(value) {
-    return String(value || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
+    function renderError(message) {
+      tableBody.innerHTML = '<tr><td colspan="8">Error al cargar pedidos: ' + escapeHtml(message) + '</td></tr>';
+      detailCard.innerHTML = '<div class="empty-state">No se pudo cargar la informacion.</div>';
+    }
 
-  function sanitizeClass(value) {
-    return String(value || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
-  }
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
 
-  statusFilter.addEventListener("change", renderTable);
-  crmFilter.addEventListener("change", renderTable);
-  searchInput.addEventListener("input", renderTable);
-  refreshBtn.addEventListener("click", loadOrders);
-  printTopBtn.addEventListener("click", openPrintView);
-  printDetailBtn.addEventListener("click", openPrintView);
+    function sanitizeClass(value) {
+      return String(value || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    }
 
-  loadOrders();
-</script>
+    statusFilter.addEventListener("change", renderTable);
+    crmFilter.addEventListener("change", renderTable);
+    searchInput.addEventListener("input", renderTable);
+    refreshBtn.addEventListener("click", loadOrders);
+    printTopBtn.addEventListener("click", openPrintView);
+    printDetailBtn.addEventListener("click", openPrintView);
+
+    loadOrders();
+  </script>
+</body>
+</html>
