@@ -1066,14 +1066,50 @@ function buildPDF(lista, multi){
   return css + paginaPedido(lista[0], now);
 }
 
+function normalizarProductos(texto){
+  const raw = String(texto || '').trim();
+  if(!raw) return [];
+
+  const limpio = raw
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p>/gi, '\n')
+    .replace(/<\/li>\s*<li>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\r/g, '')
+    .trim();
+
+  let partes = [];
+  if(limpio.includes('|')){
+    partes = limpio.split('|');
+  } else if(limpio.includes('\n')){
+    partes = limpio.split('\n');
+  } else if(/\s•\s|•/.test(limpio)){
+    partes = limpio.split(/•/);
+  } else {
+    partes = [limpio];
+  }
+
+  return partes
+    .map(s => s.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .map(item => {
+      const match = item.match(/^(.*?)(?:\s*[x×]\s*|\s+-\s+cantidad[: ]*|\s+cantidad[: ]+)(\d+(?:\.\d+)?)$/i);
+      if(match){
+        return { nombre: match[1].trim(), cantidad: match[2].trim(), importe: '—' };
+      }
+      return { nombre: item, cantidad: '1', importe: '—' };
+    });
+}
+
 function paginaPedido(p, now){
   const ubic = [p.direccion, p.ciudad, p.estado, p.cp].filter(Boolean).join(', ');
-  const prods = (p.productos||'').split('|').map(s=>s.trim()).filter(Boolean);
-  const rows = prods.map(pr => {
-    const pts = pr.split('×'); const pts2 = pr.split('x');
-    const sep = pts.length>1?pts:pts2;
-    return `<tr><td>${sep[0]?sep[0].trim():pr}</td><td>${sep[1]?sep[1].trim():'1'}</td><td>—</td></tr>`;
-  }).join('');
+  const prods = normalizarProductos(p.productos);
+  const rows = (prods.length ? prods : [{ nombre: p.productos || 'Sin detalle de productos', cantidad: '1', importe: '—' }]).map(pr =>
+    `<tr><td>${pr.nombre}</td><td>${pr.cantidad}</td><td>${pr.importe}</td></tr>`
+  ).join('');
+
   return `<div class="pw">
     <div class="wm">BIOTHAN</div>
     <div class="ph">
