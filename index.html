@@ -397,10 +397,33 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
 <div class="toast" id="toast"></div>
 
 <script>
-const SHEET_ID = "1odSmdqiJehan8JqVOBVBpisT5s7hG50eYiJwmiNM3NQ";
-const SHEET_NM = "PEDIDOS";
-const API_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NM)}`;
+// ============================================================
+//  CONFIGURACIÓN
+// ============================================================
+const SHEET_ID  = "1odSmdqiJehan8JqVOBVBpisT5s7hG50eYiJwmiNM3NQ";
+const SHEET_NM  = "PEDIDOS";
+const API_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NM)}`;
 const CRM_API_URL = "https://script.google.com/macros/s/AKfycbxtJ0TUgZj3RBBHhZcmUCYDDISOPLX20U2bfXLWcuBPhDSdk-gC6U9btyeugPYLbL_rsg/exec";
+
+// ============================================================
+//  MAPEO DE COLUMNAS — debe coincidir exactamente con HEADERS del AppScript
+//  [0]  ID Pedido
+//  [1]  Fecha
+//  [2]  Estado WooCommerce
+//  [3]  Nombre Cliente
+//  [4]  Telefono
+//  [5]  Email
+//  [6]  Direccion
+//  [7]  Ciudad
+//  [8]  Estado
+//  [9]  CP
+//  [10] Productos
+//  [11] Total
+//  [12] Metodo de pago
+//  [13] Estado CRM
+//  [14] Notas
+//  [15] Ultima actualizacion
+// ============================================================
 
 let todos=[], filtrados=[], editIdx=null, ordCol=-1, ordAsc=true;
 let chartBar=null, chartDonut=null, chartLine=null;
@@ -420,6 +443,9 @@ function mostrarVista(vista, btn){
   }
 }
 
+// ============================================================
+//  CARGA DE DATOS
+// ============================================================
 async function cargarPedidos(){
   show('loading'); hide('tabla'); hide('empty');
   const btn=document.getElementById('syncBtn');
@@ -429,32 +455,35 @@ async function cargarPedidos(){
     const txt=await res.text();
     const json=JSON.parse(txt.replace(/^.*?({.*}).*?$/s,'$1'));
     const rows=json.table.rows||[];
-    todos=rows.map((r,i)=>{
-      const c=r.c||[];
-      return{
-        idx:i,
-        pedido:v(c[0]),
-        fecha:v(c[1]),
-        estadoWoo:v(c[2]),
-        cliente:v(c[3]),
-        telefono:v(c[4]),
-        email:v(c[5]),
-        direccion:v(c[6]),
-        ciudad:v(c[7]),
-        estado:v(c[8]),
-        cp:v(c[9]),
-        productos:v(c[10]),
-        total:v(c[11]),
-        pago:v(c[12]),
-        estadoCRM:v(c[13])||'Nuevo',
-        notasInt:v(c[14])||'',
-        actualiz:v(c[15])
+
+    todos = rows.map((r, i) => {
+      const c = r.c || [];
+      return {
+        idx:       i,
+        // --- Columnas en el orden EXACTO de HEADERS ---
+        pedido:    v(c[0]),   // 0  ID Pedido
+        fecha:     v(c[1]),   // 1  Fecha
+        estadoWoo: v(c[2]),   // 2  Estado WooCommerce
+        cliente:   v(c[3]),   // 3  Nombre Cliente
+        telefono:  v(c[4]),   // 4  Telefono
+        email:     v(c[5]),   // 5  Email
+        direccion: v(c[6]),   // 6  Direccion
+        ciudad:    v(c[7]),   // 7  Ciudad
+        estado:    v(c[8]),   // 8  Estado (entidad federativa)
+        cp:        v(c[9]),   // 9  CP
+        productos: v(c[10]),  // 10 Productos
+        total:     v(c[11]),  // 11 Total
+        pago:      v(c[12]),  // 12 Metodo de pago
+        estadoCRM: v(c[13]) || 'Nuevo', // 13 Estado CRM
+        notasInt:  v(c[14]) || '',      // 14 Notas
+        actualiz:  v(c[15])  // 15 Ultima actualizacion
       };
-    }).filter(p=>p.pedido&&p.pedido!=='ID Pedido');
+    }).filter(p => p.pedido && p.pedido !== 'ID Pedido');
+
     calcStats();
     filtrar();
     toast('✓ Datos actualizados — '+todos.length+' pedidos');
-  }catch(e){
+  } catch(e){
     document.getElementById('loading').innerHTML=`
       <div class="ico">⚠️</div>
       <h3>ERROR DE CONEXIÓN</h3>
@@ -462,69 +491,102 @@ async function cargarPedidos(){
   }
   btn.classList.remove('spin');
 }
-const v=c=>{if(!c)return'';if(c.f)return c.f;if(c.v!=null)return String(c.v);return''};
 
+// Extrae el valor visible de una celda de la API gviz
+const v = c => {
+  if (!c) return '';
+  if (c.f) return c.f;          // valor formateado (fechas, moneda, etc.)
+  if (c.v != null) return String(c.v);
+  return '';
+};
+
+// ============================================================
+//  ESTADÍSTICAS
+// ============================================================
 function calcStats(){
-  const total=todos.length;
-  const proc=todos.filter(p=>p.estadoWoo==='Procesando').length;
-  const comp=todos.filter(p=>p.estadoWoo==='Completado').length;
-  let ing=0;
-  todos.forEach(p=>{const n=parseFloat((p.total||'0').replace(/[$,]/g,''));if(!isNaN(n))ing+=n;});
-  const ingFmt='$'+Math.round(ing).toLocaleString('es-MX');
-  document.getElementById('s-total').textContent=total;
-  document.getElementById('s-proc').textContent=proc;
-  document.getElementById('s-comp').textContent=comp;
-  document.getElementById('s-ing').textContent=ingFmt;
-  document.getElementById('g-total').textContent=total;
-  document.getElementById('g-ing').textContent=ingFmt;
-  const prom=total>0?'$'+Math.round(ing/total).toLocaleString('es-MX'):'—';
-  document.getElementById('g-prom').textContent=prom;
-  const pct=total>0?Math.round(comp/total*100)+'%':'—';
-  document.getElementById('g-comp').textContent=pct;
-  document.getElementById('donut-total').textContent=total;
+  const total = todos.length;
+  const proc  = todos.filter(p => p.estadoWoo === 'Procesando').length;
+  const comp  = todos.filter(p => p.estadoWoo === 'Completado').length;
+  let ing = 0;
+  todos.forEach(p => {
+    const n = parseFloat((p.total || '0').replace(/[$,]/g, ''));
+    if (!isNaN(n)) ing += n;
+  });
+  const ingFmt = '$' + Math.round(ing).toLocaleString('es-MX');
+
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-proc').textContent  = proc;
+  document.getElementById('s-comp').textContent  = comp;
+  document.getElementById('s-ing').textContent   = ingFmt;
+  document.getElementById('g-total').textContent = total;
+  document.getElementById('g-ing').textContent   = ingFmt;
+  document.getElementById('g-prom').textContent  = total > 0 ? '$' + Math.round(ing / total).toLocaleString('es-MX') : '—';
+  document.getElementById('g-comp').textContent  = total > 0 ? Math.round(comp / total * 100) + '%' : '—';
+  document.getElementById('donut-total').textContent = total;
 }
 
+// ============================================================
+//  FILTROS
+// ============================================================
 function filtrar(){
-  const q=document.getElementById('buscar').value.toLowerCase();
-  const fw=document.getElementById('f-woo').value;
-  const fc=document.getElementById('f-crm').value;
-  filtrados=todos.filter(p=>{
-    const txt=[p.pedido,p.cliente,p.email,p.telefono,p.productos].join(' ').toLowerCase();
-    return(!q||txt.includes(q))&&(!fw||p.estadoWoo===fw)&&(!fc||p.estadoCRM===fc);
+  const q  = document.getElementById('buscar').value.toLowerCase();
+  const fw = document.getElementById('f-woo').value;
+  const fc = document.getElementById('f-crm').value;
+
+  filtrados = todos.filter(p => {
+    const txt = [p.pedido, p.cliente, p.email, p.telefono, p.productos].join(' ').toLowerCase();
+    return (!q || txt.includes(q)) && (!fw || p.estadoWoo === fw) && (!fc || p.estadoCRM === fc);
   });
   render();
 }
 
+// ============================================================
+//  ORDENAMIENTO
+// ============================================================
 function ord(col){
-  if(ordCol===col)ordAsc=!ordAsc;else{ordCol=col;ordAsc=true;}
-  const keys=['pedido','fecha','estadoWoo','estadoCRM','cliente','telefono','email','productos','total'];
-  filtrados.sort((a,b)=>{
-    let va=a[keys[col]]||'',vb=b[keys[col]]||'';
-    if(col===8){
-      va=parseFloat(String(va).replace(/[$,]/g,''))||0;
-      vb=parseFloat(String(vb).replace(/[$,]/g,''))||0;
-      return ordAsc?va-vb:vb-va;
+  if (ordCol === col) ordAsc = !ordAsc; else { ordCol = col; ordAsc = true; }
+  // Mapa col-índice → propiedad del objeto
+  const keys = ['pedido','fecha','estadoWoo','estadoCRM','cliente','telefono','email','productos','total'];
+  filtrados.sort((a, b) => {
+    let va = a[keys[col]] || '', vb = b[keys[col]] || '';
+    if (col === 8) {
+      va = parseFloat(String(va).replace(/[$,]/g, '')) || 0;
+      vb = parseFloat(String(vb).replace(/[$,]/g, '')) || 0;
+      return ordAsc ? va - vb : vb - va;
     }
-    return ordAsc?String(va).localeCompare(String(vb),'es'):String(vb).localeCompare(String(va),'es');
+    return ordAsc
+      ? String(va).localeCompare(String(vb), 'es')
+      : String(vb).localeCompare(String(va), 'es');
   });
   render();
 }
 
-const BWoo={'Procesando':'bw-proc','Completado':'bw-comp','Cancelado':'bw-canc','Pendiente':'bw-pend','En espera':'bw-hold','Reembolsado':'bw-refund'};
-const BCRM={'Nuevo':'bc-new','En proceso':'bc-proc','Despachado':'bc-done','Problema':'bc-prob'};
-const bwoo=e=>`<span class="badge ${BWoo[e]||'bw-pend'}">${e||'—'}</span>`;
-const bcrm=e=>`<span class="badge ${BCRM[e]||'bc-new'}">${e||'Nuevo'}</span>`;
+// ============================================================
+//  BADGES
+// ============================================================
+const BWoo = {
+  'Procesando':'bw-proc','Completado':'bw-comp','Cancelado':'bw-canc',
+  'Pendiente':'bw-pend','En espera':'bw-hold','Reembolsado':'bw-refund'
+};
+const BCRM = {
+  'Nuevo':'bc-new','En proceso':'bc-proc','Despachado':'bc-done','Problema':'bc-prob'
+};
+const bwoo = e => `<span class="badge ${BWoo[e]||'bw-pend'}">${e||'—'}</span>`;
+const bcrm = e => `<span class="badge ${BCRM[e]||'bc-new'}">${e||'Nuevo'}</span>`;
 
+// ============================================================
+//  ACTUALIZAR CRM (JSONP)
+// ============================================================
 function actualizarCRMRemoto(pedidoId, estado, notas) {
   return new Promise((resolve, reject) => {
-    const cb = "crmcb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+    const cb     = "crmcb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
     const script = document.createElement("script");
-    const url = new URL(CRM_API_URL);
+    const url    = new URL(CRM_API_URL);
 
     url.searchParams.set("action", "updateCRM");
-    url.searchParams.set("id", pedidoId);
+    url.searchParams.set("id",     pedidoId);
     url.searchParams.set("estado", estado);
-    url.searchParams.set("notas", notas || "");
+    url.searchParams.set("notas",  notas || "");
     url.searchParams.set("callback", cb);
 
     window[cb] = (resp) => {
@@ -532,230 +594,248 @@ function actualizarCRMRemoto(pedidoId, estado, notas) {
       if (resp && resp.ok) resolve(resp);
       else reject(new Error(resp && resp.error ? resp.error : "No se pudo guardar"));
     };
+    script.onerror = () => { cleanup(); reject(new Error("No fue posible conectar con Apps Script")); };
 
-    script.onerror = () => {
-      cleanup();
-      reject(new Error("No fue posible conectar con Apps Script"));
-    };
-
-    function cleanup() {
-      try { delete window[cb]; } catch(e) { window[cb] = undefined; }
+    function cleanup(){
+      try { delete window[cb]; } catch(e){ window[cb]=undefined; }
       if (script.parentNode) script.parentNode.removeChild(script);
     }
-
     script.src = url.toString();
     document.body.appendChild(script);
   });
 }
 
+// ============================================================
+//  RENDER TABLA
+// ============================================================
 function render(){
   hide('loading');
-  document.getElementById('tbl-count').textContent=filtrados.length+' registro'+(filtrados.length!==1?'s':'');
-  if(!filtrados.length){hide('tabla');show('empty');return;}
-  show('tabla');hide('empty');
-  document.getElementById('tbody').innerHTML=filtrados.map((p,i)=>`
-    <tr onclick="abrirModal(${i})" style="animation-delay:${i*.025}s">
+  document.getElementById('tbl-count').textContent = filtrados.length + ' registro' + (filtrados.length !== 1 ? 's' : '');
+
+  if (!filtrados.length){ hide('tabla'); show('empty'); return; }
+  show('tabla'); hide('empty');
+
+  document.getElementById('tbody').innerHTML = filtrados.map((p, i) => `
+    <tr onclick="abrirModal(${i})" style="animation-delay:${i * .025}s">
       <td><span class="pnum">${p.pedido}</span></td>
       <td><span class="tsml">${p.fecha}</span></td>
       <td>${bwoo(p.estadoWoo)}</td>
       <td>${bcrm(p.estadoCRM)}</td>
-      <td><div class="cname">${p.cliente}</div></td>
+      <td>
+        <div class="cname">${p.cliente}</div>
+      </td>
       <td><span class="tsml">${p.telefono}</span></td>
       <td><div class="cemail">${p.email}</div></td>
       <td><div class="plist" title="${p.productos}">${p.productos}</div></td>
       <td><span class="tmonto">${p.total}</span></td>
       <td onclick="event.stopPropagation()">
         <select class="crm-sel" onchange="quickCRM(${i},this.value)">
-          ${['Nuevo','En proceso','Despachado','Problema'].map(s=>`<option ${p.estadoCRM===s?'selected':''}>${s}</option>`).join('')}
+          ${['Nuevo','En proceso','Despachado','Problema'].map(s =>
+            `<option ${p.estadoCRM === s ? 'selected' : ''}>${s}</option>`
+          ).join('')}
         </select>
       </td>
     </tr>`).join('');
 }
 
+// ============================================================
+//  MODAL DETALLE
+// ============================================================
 function abrirModal(i){
-  const p=filtrados[i]; editIdx=i;
-  document.getElementById('m-title').textContent='PEDIDO '+p.pedido;
-  document.getElementById('m-fecha').textContent=p.fecha;
-  document.getElementById('m-crm').value=p.estadoCRM||'Nuevo';
-  document.getElementById('m-notas').value=p.notasInt||'';
-  const direccionCompleta = [p.direccion,p.ciudad,p.estado,p.cp].filter(Boolean).join(', ');
-  const campos=[
-    ['Estado WooCommerce',bwoo(p.estadoWoo)],
-    ['Método de pago',p.pago],
-    ['Cliente',p.cliente],
-    ['Teléfono',p.telefono],
-    ['Email',`<a href="mailto:${p.email}" style="color:var(--g)">${p.email}</a>`],
-    ['Ubicación',direccionCompleta||'—'],
-    ['Productos',p.productos,true],
-    ['Total',`<span class="big">${p.total}</span>`,true],
+  const p = filtrados[i];
+  editIdx = i;
+
+  document.getElementById('m-title').textContent  = 'PEDIDO ' + p.pedido;
+  document.getElementById('m-fecha').textContent  = p.fecha;
+  document.getElementById('m-crm').value          = p.estadoCRM || 'Nuevo';
+  document.getElementById('m-notas').value        = p.notasInt  || '';
+
+  const direccionCompleta = [p.direccion, p.ciudad, p.estado, p.cp].filter(Boolean).join(', ');
+
+  const campos = [
+    ['Estado WooCommerce', bwoo(p.estadoWoo)],
+    ['Método de pago',     p.pago],
+    ['Cliente',            p.cliente],
+    ['Teléfono',           p.telefono],
+    ['Email',              `<a href="mailto:${p.email}" style="color:var(--g)">${p.email}</a>`],
+    ['Ubicación',          direccionCompleta || '—'],
+    ['Productos',          p.productos, true],
+    ['Total',              `<span class="big">${p.total}</span>`, true],
   ];
-  document.getElementById('m-grid').innerHTML=campos.map(([l,val,f])=>
-    `<div class="mfield${f?' mfull':''}"><label>${l}</label><value>${val||'—'}</value></div>`).join('');
+
+  document.getElementById('m-grid').innerHTML = campos.map(([l, val, f]) =>
+    `<div class="mfield${f ? ' mfull' : ''}"><label>${l}</label><value>${val || '—'}</value></div>`
+  ).join('');
+
   document.getElementById('overlay').classList.add('on');
 }
-function cModal(e){if(e.target===document.getElementById('overlay'))closeModal();}
-function closeModal(){document.getElementById('overlay').classList.remove('on');editIdx=null;}
 
+function cModal(e){ if(e.target === document.getElementById('overlay')) closeModal(); }
+function closeModal(){ document.getElementById('overlay').classList.remove('on'); editIdx = null; }
+
+// ============================================================
+//  GUARDAR
+// ============================================================
 async function guardar(){
-  if(editIdx===null)return;
+  if (editIdx === null) return;
+  const estado = document.getElementById('m-crm').value;
+  const notas  = document.getElementById('m-notas').value;
+  const p      = filtrados[editIdx];
 
-  const estado=document.getElementById('m-crm').value;
-  const notas=document.getElementById('m-notas').value;
-  const p=filtrados[editIdx];
-
-  try{
+  try {
     await actualizarCRMRemoto(p.pedido, estado, notas);
-    p.estadoCRM=estado;
-    p.notasInt=notas;
-    const orig=todos.find(x=>x.pedido===p.pedido);
-    if(orig){
-      orig.estadoCRM=estado;
-      orig.notasInt=notas;
-    }
+    p.estadoCRM = estado;
+    p.notasInt  = notas;
+    const orig  = todos.find(x => x.pedido === p.pedido);
+    if (orig){ orig.estadoCRM = estado; orig.notasInt = notas; }
     render();
     toast('✓ Guardado en Google Sheets');
     closeModal();
-  }catch(e){
+  } catch(e) {
     toast('Error: ' + e.message);
   }
 }
 
-async function quickCRM(i,val){
-  const p=filtrados[i];
-  const notas=p.notasInt||'';
-
-  try{
+async function quickCRM(i, val){
+  const p     = filtrados[i];
+  const notas = p.notasInt || '';
+  try {
     await actualizarCRMRemoto(p.pedido, val, notas);
-    p.estadoCRM=val;
-    const orig=todos.find(x=>x.pedido===p.pedido);
-    if(orig)orig.estadoCRM=val;
+    p.estadoCRM = val;
+    const orig  = todos.find(x => x.pedido === p.pedido);
+    if (orig) orig.estadoCRM = val;
     filtrar();
     toast('✓ Guardado en Google Sheets');
-  }catch(e){
+  } catch(e) {
     toast('Error: ' + e.message);
     render();
   }
 }
 
+// ============================================================
+//  GRÁFICAS
+// ============================================================
 function renderGraficas(){
-  if(!todos.length)return;
+  if (!todos.length) return;
 
-  const byMonth={};
-  todos.forEach(p=>{
-    const f=p.fecha||'';
-    const parts=f.split('/');
-    if(parts.length>=2){
-      const key=parts[1]+'/'+parts[2]?.split(' ')[0];
-      const n=parseFloat((p.total||'0').replace(/[$,]/g,''))||0;
-      byMonth[key]=(byMonth[key]||0)+n;
+  // -- Ingresos por mes --
+  const byMonth = {};
+  todos.forEach(p => {
+    const f = p.fecha || '';
+    const parts = f.split('/');
+    if (parts.length >= 2){
+      const key = parts[1] + '/' + (parts[2] || '').split(' ')[0];
+      const n   = parseFloat((p.total || '0').replace(/[$,]/g,'')) || 0;
+      byMonth[key] = (byMonth[key] || 0) + n;
     }
   });
-  const meses=Object.keys(byMonth).sort().slice(-8);
-  const vals=meses.map(m=>byMonth[m]);
+  const meses = Object.keys(byMonth).sort().slice(-8);
+  const vals  = meses.map(m => byMonth[m]);
 
-  if(chartBar)chartBar.destroy();
-  chartBar=new Chart(document.getElementById('chartBar'),{
-    type:'bar',
-    data:{
-      labels:meses,
-      datasets:[{
-        label:'Ingresos MXN',
-        data:vals,
-        backgroundColor:'rgba(58,153,0,.15)',
-        borderColor:'#3a9900',
-        borderWidth:2,
-        borderRadius:6,
-        borderSkipped:false,
+  if (chartBar) chartBar.destroy();
+  chartBar = new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+      labels: meses,
+      datasets: [{
+        label: 'Ingresos MXN', data: vals,
+        backgroundColor: 'rgba(58,153,0,.15)', borderColor: '#3a9900',
+        borderWidth: 2, borderRadius: 6, borderSkipped: false
       }]
     },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.y.toLocaleString('es-MX')}}},
-      scales:{
-        x:{grid:{display:false},ticks:{font:{family:'DM Sans',size:11},color:'#888'}},
-        y:{grid:{color:'#f0f0f0'},ticks:{font:{family:'DM Sans',size:11},color:'#888',callback:v=>'$'+v.toLocaleString('es-MX')}}
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$'+ctx.parsed.y.toLocaleString('es-MX') } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#888' } },
+        y: { grid: { color: '#f0f0f0' }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#888', callback: v => '$'+v.toLocaleString('es-MX') } }
       }
     }
   });
 
-  const estados={};
-  todos.forEach(p=>{estados[p.estadoWoo]=(estados[p.estadoWoo]||0)+1;});
-  const eLabels=Object.keys(estados);
-  const eVals=eLabels.map(k=>estados[k]);
-  const eColors={'Completado':'#3a9900','Procesando':'#d97e00','Pendiente':'#888','Cancelado':'#d93535','En espera':'#d97e00','Reembolsado':'#1a5fd9'};
-  const cols=eLabels.map(l=>eColors[l]||'#ccc');
+  // -- Donut estados --
+  const estados = {};
+  todos.forEach(p => { estados[p.estadoWoo] = (estados[p.estadoWoo] || 0) + 1; });
+  const eLabels = Object.keys(estados);
+  const eVals   = eLabels.map(k => estados[k]);
+  const eColors = { 'Completado':'#3a9900','Procesando':'#d97e00','Pendiente':'#888','Cancelado':'#d93535','En espera':'#d97e00','Reembolsado':'#1a5fd9' };
+  const cols    = eLabels.map(l => eColors[l] || '#ccc');
 
-  if(chartDonut)chartDonut.destroy();
-  chartDonut=new Chart(document.getElementById('chartDonut'),{
-    type:'doughnut',
-    data:{labels:eLabels,datasets:[{data:eVals,backgroundColor:cols.map(c=>c+'22'),borderColor:cols,borderWidth:2.5,hoverOffset:6}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.parsed+' pedidos'}}}}
+  if (chartDonut) chartDonut.destroy();
+  chartDonut = new Chart(document.getElementById('chartDonut'), {
+    type: 'doughnut',
+    data: { labels: eLabels, datasets: [{ data: eVals, backgroundColor: cols.map(c=>c+'22'), borderColor: cols, borderWidth: 2.5, hoverOffset: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.label+': '+ctx.parsed+' pedidos' } } } }
   });
 
-  document.getElementById('legend').innerHTML=eLabels.map((l,i)=>
+  document.getElementById('legend').innerHTML = eLabels.map((l, i) =>
     `<div class="legend-item">
       <div class="legend-left"><div class="legend-dot" style="background:${cols[i]}"></div>${l}</div>
       <span class="legend-val">${eVals[i]}</span>
     </div>`).join('');
 
-  const byDay={};
-  const hoy=new Date();
-  for(let i=29;i>=0;i--){
-    const d=new Date(hoy);d.setDate(d.getDate()-i);
-    const key=d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit'});
-    byDay[key]=0;
+  // -- Línea pedidos por día --
+  const byDay = {};
+  const hoy   = new Date();
+  for (let i = 29; i >= 0; i--){
+    const d   = new Date(hoy); d.setDate(d.getDate() - i);
+    const key = d.toLocaleDateString('es-MX', { day:'2-digit', month:'2-digit' });
+    byDay[key] = 0;
   }
-  todos.forEach(p=>{
-    const f=p.fecha||'';
-    const parts=f.split('/');
-    if(parts.length>=2){
-      const key=parts[0]+'/'+parts[1];
-      if(byDay[key]!==undefined)byDay[key]++;
+  todos.forEach(p => {
+    const f = p.fecha || '';
+    const parts = f.split('/');
+    if (parts.length >= 2){
+      const key = parts[0] + '/' + parts[1];
+      if (byDay[key] !== undefined) byDay[key]++;
     }
   });
-  const dLabels=Object.keys(byDay);
-  const dVals=dLabels.map(k=>byDay[k]);
+  const dLabels = Object.keys(byDay);
+  const dVals   = dLabels.map(k => byDay[k]);
 
-  if(chartLine)chartLine.destroy();
-  chartLine=new Chart(document.getElementById('chartLine'),{
-    type:'line',
-    data:{
-      labels:dLabels,
-      datasets:[{
-        label:'Pedidos',data:dVals,
-        borderColor:'#3a9900',backgroundColor:'rgba(58,153,0,.06)',
-        borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#3a9900',
-        tension:.4,fill:true,
+  if (chartLine) chartLine.destroy();
+  chartLine = new Chart(document.getElementById('chartLine'), {
+    type: 'line',
+    data: {
+      labels: dLabels,
+      datasets: [{
+        label: 'Pedidos', data: dVals,
+        borderColor: '#3a9900', backgroundColor: 'rgba(58,153,0,.06)',
+        borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: '#3a9900',
+        tension: .4, fill: true
       }]
     },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{grid:{display:false},ticks:{font:{family:'DM Sans',size:10},color:'#888',maxTicksLimit:10}},
-        y:{grid:{color:'#f0f0f0'},ticks:{font:{family:'DM Sans',size:11},color:'#888',stepSize:1}}
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Sans', size: 10 }, color: '#888', maxTicksLimit: 10 } },
+        y: { grid: { color: '#f0f0f0' }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#888', stepSize: 1 } }
       }
     }
   });
 }
 
+// ============================================================
+//  PDF / IMPRIMIR
+// ============================================================
 function imprimirPedido(){
-  if(editIdx===null)return;
-  const p=filtrados[editIdx];
-  document.getElementById('print-area').innerHTML=buildPDF([p],false);
+  if (editIdx === null) return;
+  const p = filtrados[editIdx];
+  document.getElementById('print-area').innerHTML = buildPDF([p], false);
   closeModal();
-  setTimeout(()=>window.print(),350);
+  setTimeout(() => window.print(), 350);
 }
 
 function exportarPDFHoja(){
-  if(!filtrados.length){toast('Sin pedidos que exportar');return;}
-  document.getElementById('print-area').innerHTML=buildPDF(filtrados,true);
-  setTimeout(()=>window.print(),350);
+  if (!filtrados.length){ toast('Sin pedidos que exportar'); return; }
+  document.getElementById('print-area').innerHTML = buildPDF(filtrados, true);
+  setTimeout(() => window.print(), 350);
 }
 
-function buildPDF(lista,multi){
-  const now=new Date().toLocaleString('es-MX');
-  const css=`<style>
+function buildPDF(lista, multi){
+  const now = new Date().toLocaleString('es-MX');
+  const css = `<style>
     @page{size:A4;margin:0}*{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;background:#fff;color:#111}
     .pw{width:210mm;min-height:297mm;display:flex;flex-direction:column;position:relative;page-break-after:always}
@@ -801,11 +881,12 @@ function buildPDF(lista,multi){
     .rtrow{display:flex;justify-content:flex-end;gap:36px;padding:12px 0 0;border-top:2px solid #3a9900;margin-top:6px;font-weight:700;font-size:14px;color:#3a9900}
   </style>`;
 
-  if(multi){
-    let ing=0;
-    filtrados.forEach(p=>{const n=parseFloat((p.total||'0').replace(/[$,]/g,''));if(!isNaN(n))ing+=n;});
-    const tf='$'+ing.toLocaleString('es-MX',{minimumFractionDigits:2});
-    const filas=filtrados.map(p=>`<tr>
+  if (multi){
+    let ing = 0;
+    filtrados.forEach(p => { const n = parseFloat((p.total||'0').replace(/[$,]/g,'')); if(!isNaN(n)) ing+=n; });
+    const tf = '$' + ing.toLocaleString('es-MX', { minimumFractionDigits:2 });
+
+    const filas = filtrados.map(p => `<tr>
       <td style="font-weight:700;color:#3a9900">${p.pedido}</td>
       <td>${p.fecha}</td>
       <td><span class="eb" style="font-size:9px;padding:2px 7px">${p.estadoWoo}</span></td>
@@ -817,7 +898,7 @@ function buildPDF(lista,multi){
       <td class="rmon">${p.total}</td>
     </tr>`).join('');
 
-    const resumen=`<div class="pw">
+    const resumen = `<div class="pw">
       <div class="wm">BIOTHAN</div>
       <div class="ph">
         <div class="ph-logo"><div class="ph-ic">🌿</div><div><div class="ph-brand">BIOTHAN</div><div class="ph-sub">Reporte de Pedidos</div></div></div>
@@ -838,20 +919,22 @@ function buildPDF(lista,multi){
       </div>
       <div class="pf"><span class="pf-b">BIOTHAN · biothan.com.mx</span><span class="pf-t">BIOTHAN CRM · ${now}</span></div>
     </div>`;
-    const detalles=filtrados.map(p=>paginaPedido(p,now)).join('');
-    return css+resumen+detalles;
+
+    const detalles = filtrados.map(p => paginaPedido(p, now)).join('');
+    return css + resumen + detalles;
   }
-  return css+paginaPedido(lista[0],now);
+  return css + paginaPedido(lista[0], now);
 }
 
-function paginaPedido(p,now){
-  const prods=(p.productos||'').split('|').map(s=>s.trim()).filter(Boolean);
-  const rows=prods.map(pr=>{
-    const pts=pr.split('×');
-    return`<tr><td>${pts[0]?pts[0].trim():pr}</td><td>${pts[1]?pts[1].trim():'1'}</td><td>—</td></tr>`;
+function paginaPedido(p, now){
+  const prods = (p.productos || '').split('|').map(s => s.trim()).filter(Boolean);
+  const rows  = prods.map(pr => {
+    const pts = pr.split('×');
+    return `<tr><td>${pts[0] ? pts[0].trim() : pr}</td><td>${pts[1] ? pts[1].trim() : '1'}</td><td>—</td></tr>`;
   }).join('');
-  const direccionCompleta=[p.direccion,p.ciudad,p.estado,p.cp].filter(Boolean).join(', ');
-  return`<div class="pw">
+  const direccionCompleta = [p.direccion, p.ciudad, p.estado, p.cp].filter(Boolean).join(', ');
+
+  return `<div class="pw">
     <div class="wm">BIOTHAN</div>
     <div class="ph">
       <div class="ph-logo"><div class="ph-ic">🌿</div><div><div class="ph-brand">BIOTHAN</div><div class="ph-sub">Comprobante de Pedido</div></div></div>
@@ -860,7 +943,7 @@ function paginaPedido(p,now){
     <div class="hero">
       <span class="hero-num">NÚMERO: ${p.pedido}</span>
       <span class="hero-date">${p.fecha}</span>
-      <span class="hero-badge">${p.estadoWoo.toUpperCase()}</span>
+      <span class="hero-badge">${(p.estadoWoo||'').toUpperCase()}</span>
     </div>
     <div class="pb">
       <div class="two">
@@ -874,7 +957,7 @@ function paginaPedido(p,now){
         <div class="section">
           <div class="st">Datos del pago</div>
           <div class="field"><label>Método de pago</label><value>${p.pago||'—'}</value></div>
-          <div class="field"><label>Estado WooCommerce</label><value><span class="eb">${p.estadoWoo}</span></value></div>
+          <div class="field"><label>Estado WooCommerce</label><value><span class="eb">${p.estadoWoo||'—'}</span></value></div>
           <div class="field"><label>Estado CRM</label><value><span class="cb">${(p.estadoCRM||'NUEVO').toUpperCase()}</span></value></div>
         </div>
       </div>
@@ -888,26 +971,34 @@ function paginaPedido(p,now){
           <div class="trow big"><span>TOTAL</span><span>${p.total||'—'}</span></div>
         </div>
       </div>
-      ${p.notasInt?`<div class="section"><div class="st">Notas internas</div><div class="nota" style="border-color:#888">${p.notasInt}</div></div>`:''}
+      ${p.notasInt ? `<div class="section"><div class="st">Notas internas</div><div class="nota" style="border-color:#888">${p.notasInt}</div></div>` : ''}
     </div>
     <div class="pf"><span class="pf-b">BIOTHAN · biothan.com.mx</span><span class="pf-t">BIOTHAN CRM · ${now}</span></div>
   </div>`;
 }
 
 function exportarExcel(){
-  window.open(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx&sheet=${encodeURIComponent(SHEET_NM)}`,'_blank');
+  window.open(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx&sheet=${encodeURIComponent(SHEET_NM)}`, '_blank');
 }
 
-const show=id=>{const el=document.getElementById(id);if(el)el.style.display=''};
-const hide=id=>{const el=document.getElementById(id);if(el)el.style.display='none'};
+// ============================================================
+//  HELPERS UI
+// ============================================================
+const show = id => { const el=document.getElementById(id); if(el) el.style.display=''; };
+const hide = id => { const el=document.getElementById(id); if(el) el.style.display='none'; };
+
 function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('on');
-  setTimeout(()=>t.classList.remove('on'),3000);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  setTimeout(() => t.classList.remove('on'), 3000);
 }
 
+// ============================================================
+//  INICIO
+// ============================================================
 cargarPedidos();
-setInterval(cargarPedidos,120000);
+setInterval(cargarPedidos, 120000);
 </script>
 </body>
 </html>
