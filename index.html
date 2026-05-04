@@ -25,8 +25,6 @@ body{background:var(--wh2);color:var(--tx);font-family:var(--fs);font-size:14px;
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:var(--wh3)}
 ::-webkit-scrollbar-thumb{background:var(--g);border-radius:2px}
-
-/* ══ SIDEBAR ══════════════════════════════════════════════ */
 .sidebar{
   position:fixed;left:0;top:0;bottom:0;width:240px;
   background:var(--bk2);
@@ -63,11 +61,7 @@ body{background:var(--wh2);color:var(--tx);font-family:var(--fs);font-size:14px;
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(58,153,0,.5)}50%{box-shadow:0 0 0 5px rgba(58,153,0,0)}}
 .sb-live-txt{font-family:var(--fs);font-size:11px;color:rgba(255,255,255,.3);letter-spacing:1px}
 .sb-live-txt strong{color:var(--g);font-weight:600}
-
-/* ══ MAIN ══════════════════════════════════════════════════ */
 .main{margin-left:240px;min-height:100vh;display:flex;flex-direction:column}
-
-/* ══ TOPBAR ════════════════════════════════════════════════ */
 .topbar{
   background:var(--wh);border-bottom:1px solid var(--bd);
   padding:0 36px;height:64px;
@@ -90,15 +84,9 @@ body{background:var(--wh2);color:var(--tx);font-family:var(--fs);font-size:14px;
 .btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
 .btn-sync.spin svg{animation:spinA .7s linear infinite}
 @keyframes spinA{to{transform:rotate(360deg)}}
-
-/* ══ CONTENT ═══════════════════════════════════════════════ */
 .content{padding:28px 36px;flex:1}
-
-/* ══ VISTA PEDIDOS ══════════════════════════════════════════ */
 #vista-pedidos{display:block}
 #vista-grafica{display:none}
-
-/* ══ KPIS ══════════════════════════════════════════════════ */
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
 .kpi{
   background:var(--wh);border:1.5px solid var(--bd);border-radius:var(--r);
@@ -106,7 +94,6 @@ body{background:var(--wh2);color:var(--tx);font-family:var(--fs);font-size:14px;
   transition:all .2s;cursor:default;
 }
 .kpi:hover{border-color:var(--gb);box-shadow:var(--sh)}
-.kpi-left{}
 .kpi-val{font-family:var(--ff);font-size:36px;color:var(--tx);line-height:1;letter-spacing:1px}
 .kpi-val.green{color:var(--g)}
 .kpi-label{font-family:var(--fs);font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;margin-top:5px}
@@ -118,8 +105,6 @@ body{background:var(--wh2);color:var(--tx);font-family:var(--fs);font-size:14px;
 .kpi-icon.amber{background:rgba(217,126,0,.08)}
 .kpi-icon.blue{background:rgba(26,95,217,.07)}
 .kpi-icon.red{background:rgba(217,53,53,.07)}
-
-/* ══ TOOLBAR ═══════════════════════════════════════════════ */
 .toolbar{
   background:var(--wh);border:1.5px solid var(--bd);border-radius:var(--r);
   padding:14px 18px;display:flex;align-items:center;gap:10px;
@@ -147,8 +132,6 @@ body{background:var(--wh2);color:var(--tx);font-family:var(--fs);font-size:14px;
 }
 .tbtn:hover{border-color:var(--g);color:var(--g);background:var(--ga)}
 .tbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}
-
-/* ══ TABLE ══════════════════════════════════════════════════ */
 .tbl-wrap{background:var(--wh);border:1.5px solid var(--bd);border-radius:var(--r);overflow:hidden}
 .tbl-header{
   display:flex;align-items:center;justify-content:space-between;
@@ -178,8 +161,6 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
 .plist{max-width:170px;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--tx3)}
 .tmonto{font-family:var(--ff);font-size:18px;color:var(--tx);letter-spacing:.5px}
 .tsml{font-size:12px;color:var(--tx3)}
-
-/* ══ BADGES ════════════════════════════════════════════════ */
 .badge{
   display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
   border-radius:20px;font-family:var(--fs);font-size:11px;font-weight:600;
@@ -196,8 +177,6 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
 .bc-proc{background:#fff8e6;color:#b06000;border:1px solid #f0d080}
 .bc-done{background:#eef3ff;color:var(--blu);border:1px solid #b0c4f0}
 .bc-prob{background:#fdf0f0;color:var(--red);border:1px solid #f0b0b0}
-
-/* CRM select inline */
 .crm-sel{
   background:var(--wh2);border:1.5px solid var(--bd2);border-radius:6px;
   padding:5px 10px;color:var(--tx);font-family:var(--fs);font-size:11px;
@@ -205,15 +184,11 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
 }
 .crm-sel:hover,.crm-sel:focus{border-color:var(--g);background:var(--wh)}
 .crm-sel option{background:var(--wh);font-family:var(--fs)}
-
-/* ══ EMPTY / LOADING ═══════════════════════════════════════ */
 .state-box{text-align:center;padding:60px 20px}
 .state-box .ico{font-size:48px;margin-bottom:14px}
 .state-box h3{font-family:var(--ff);font-size:20px;letter-spacing:1.5px;color:var(--tx2);margin-bottom:6px}
 .state-box p{font-family:var(--fs);font-size:13px;color:var(--tx3)}
 .spinner{width:32px;height:32px;border:3px solid var(--bd);border-top-color:var(--g);border-radius:50%;animation:spinA .8s linear infinite;margin:0 auto 14px}
-
-/* ══ MODAL ══════════════════════════════════════════════════ */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
 .overlay.on{display:flex}
 .modal{
@@ -263,8 +238,6 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
 .mcrm:focus,.mcrm:hover{border-color:var(--g);background:var(--wh)}
 .mcrm option{background:var(--wh)}
 .mbtns{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
-
-/* ══ TOAST ══════════════════════════════════════════════════ */
 .toast{
   position:fixed;bottom:28px;right:28px;z-index:500;
   background:var(--bk2);color:var(--wh);
@@ -275,8 +248,6 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
   max-width:320px;
 }
 .toast.on{transform:none;opacity:1}
-
-/* ══ GRÁFICA ════════════════════════════════════════════════ */
 .chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:24px}
 .chart-card{background:var(--wh);border:1.5px solid var(--bd);border-radius:var(--r);padding:22px 24px}
 .chart-card h3{font-family:var(--ff);font-size:16px;letter-spacing:1.5px;color:var(--tx);margin-bottom:4px}
@@ -295,8 +266,6 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
 .stat-mini{background:var(--wh);border:1.5px solid var(--bd);border-radius:var(--r);padding:16px 18px}
 .stat-mini .n{font-family:var(--ff);font-size:28px;color:var(--g);line-height:1}
 .stat-mini .l{font-family:var(--fs);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;margin-top:4px}
-
-/* ══ PRINT ══════════════════════════════════════════════════ */
 #print-area{display:none}
 @media print{
   .sidebar,.main{display:none!important}
@@ -308,7 +277,6 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
 </head>
 <body>
 
-<!-- ═══ SIDEBAR ═══ -->
 <nav class="sidebar">
   <div class="sb-logo">
     <div class="sb-brand">
@@ -352,10 +320,7 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
   </div>
 </nav>
 
-<!-- ═══ MAIN ═══ -->
 <div class="main">
-
-  <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-left">
       <h1 id="page-title">PEDIDOS</h1>
@@ -373,12 +338,8 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
     </div>
   </div>
 
-  <!-- CONTENT -->
   <div class="content">
-
-    <!-- ═══ VISTA PEDIDOS ═══ -->
     <div id="vista-pedidos">
-      <!-- KPIs -->
       <div class="kpis">
         <div class="kpi">
           <div class="kpi-left">
@@ -410,7 +371,6 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
         </div>
       </div>
 
-      <!-- TOOLBAR -->
       <div class="toolbar">
         <input class="srch" type="text" id="buscar" placeholder="🔍  Buscar pedido, cliente, email, teléfono..." oninput="filtrar()">
         <select class="fil" id="f-woo" onchange="filtrar()">
@@ -430,7 +390,6 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
         </button>
       </div>
 
-      <!-- TABLA -->
       <div class="tbl-wrap">
         <div class="tbl-header">
           <div style="display:flex;align-items:center;gap:10px">
@@ -466,7 +425,6 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
       </div>
     </div>
 
-    <!-- ═══ VISTA GRÁFICA ═══ -->
     <div id="vista-grafica">
       <div class="stats-list">
         <div class="stat-mini"><div class="n" id="g-total">—</div><div class="l">Pedidos totales</div></div>
@@ -499,11 +457,9 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
         <div class="chart-wrap"><canvas id="chartLine"></canvas></div>
       </div>
     </div>
-
   </div>
 </div>
 
-<!-- ═══ MODAL DETALLE ═══ -->
 <div class="overlay" id="overlay" onclick="cModal(event)">
   <div class="modal">
     <div class="mhdr">
@@ -550,11 +506,11 @@ tbody td{padding:13px 14px;vertical-align:middle;white-space:nowrap}
 const SHEET_ID = "1odSmdqiJehan8JqVOBVBpisT5s7hG50eYiJwmiNM3NQ";
 const SHEET_NM = "PEDIDOS";
 const API_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NM)}`;
+const CRM_API_URL = "https://script.google.com/macros/s/AKfycbxtJ0TUgZj3RBBHhZcmUCYDDISOPLX20U2bfXLWcuBPhDSdk-gC6U9btyeugPYLbL_rsg/exec";
 
 let todos=[], filtrados=[], editIdx=null, ordCol=-1, ordAsc=true;
 let chartBar=null, chartDonut=null, chartLine=null;
 
-// ── VISTAS ──────────────────────────────────────────────────
 function mostrarVista(vista, btn){
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   btn.classList.add('active');
@@ -570,7 +526,6 @@ function mostrarVista(vista, btn){
   }
 }
 
-// ── CARGA ───────────────────────────────────────────────────
 async function cargarPedidos(){
   show('loading'); hide('tabla'); hide('empty');
   const btn=document.getElementById('syncBtn');
@@ -603,7 +558,6 @@ async function cargarPedidos(){
 }
 const v=c=>{if(!c)return'';if(c.f)return c.f;if(c.v!=null)return String(c.v);return''};
 
-// ── STATS ───────────────────────────────────────────────────
 function calcStats(){
   const total=todos.length;
   const proc=todos.filter(p=>p.estadoWoo==='Procesando').length;
@@ -615,7 +569,6 @@ function calcStats(){
   document.getElementById('s-proc').textContent=proc;
   document.getElementById('s-comp').textContent=comp;
   document.getElementById('s-ing').textContent=ingFmt;
-  // grafica stats
   document.getElementById('g-total').textContent=total;
   document.getElementById('g-ing').textContent=ingFmt;
   const prom=total>0?'$'+Math.round(ing/total).toLocaleString('es-MX'):'—';
@@ -625,7 +578,6 @@ function calcStats(){
   document.getElementById('donut-total').textContent=total;
 }
 
-// ── FILTROS ─────────────────────────────────────────────────
 function filtrar(){
   const q=document.getElementById('buscar').value.toLowerCase();
   const fw=document.getElementById('f-woo').value;
@@ -637,7 +589,6 @@ function filtrar(){
   render();
 }
 
-// ── ORDEN ───────────────────────────────────────────────────
 function ord(col){
   if(ordCol===col)ordAsc=!ordAsc;else{ordCol=col;ordAsc=true;}
   const keys=['pedido','fecha','estadoWoo','estadoCRM','cliente','telefono','productos','pago','total'];
@@ -649,13 +600,44 @@ function ord(col){
   render();
 }
 
-// ── BADGES ──────────────────────────────────────────────────
 const BWoo={'Procesando':'bw-proc','Completado':'bw-comp','Cancelado':'bw-canc','Pendiente':'bw-pend','En espera':'bw-hold','Reembolsado':'bw-refund'};
 const BCRM={'Nuevo':'bc-new','En proceso':'bc-proc','Despachado':'bc-done','Problema':'bc-prob'};
 const bwoo=e=>`<span class="badge ${BWoo[e]||'bw-pend'}">${e||'—'}</span>`;
 const bcrm=e=>`<span class="badge ${BCRM[e]||'bc-new'}">${e||'Nuevo'}</span>`;
 
-// ── RENDER ──────────────────────────────────────────────────
+function actualizarCRMRemoto(pedidoId, estado, notas) {
+  return new Promise((resolve, reject) => {
+    const cb = "crmcb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+    const script = document.createElement("script");
+    const url = new URL(CRM_API_URL);
+
+    url.searchParams.set("action", "updateCRM");
+    url.searchParams.set("id", pedidoId);
+    url.searchParams.set("estado", estado);
+    url.searchParams.set("notas", notas || "");
+    url.searchParams.set("callback", cb);
+
+    window[cb] = (resp) => {
+      cleanup();
+      if (resp && resp.ok) resolve(resp);
+      else reject(new Error(resp && resp.error ? resp.error : "No se pudo guardar"));
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("No fue posible conectar con Apps Script"));
+    };
+
+    function cleanup() {
+      try { delete window[cb]; } catch(e) { window[cb] = undefined; }
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    script.src = url.toString();
+    document.body.appendChild(script);
+  });
+}
+
 function render(){
   hide('loading');
   document.getElementById('tbl-count').textContent=filtrados.length+' registro'+(filtrados.length!==1?'s':'');
@@ -680,7 +662,6 @@ function render(){
     </tr>`).join('');
 }
 
-// ── MODAL ───────────────────────────────────────────────────
 function abrirModal(i){
   const p=filtrados[i]; editIdx=i;
   document.getElementById('m-title').textContent='PEDIDO '+p.pedido;
@@ -704,28 +685,50 @@ function abrirModal(i){
 function cModal(e){if(e.target===document.getElementById('overlay'))closeModal();}
 function closeModal(){document.getElementById('overlay').classList.remove('on');editIdx=null;}
 
-function guardar(){
+async function guardar(){
   if(editIdx===null)return;
+
   const estado=document.getElementById('m-crm').value;
   const notas=document.getElementById('m-notas').value;
   const p=filtrados[editIdx];
-  p.estadoCRM=estado; p.notasInt=notas;
-  const orig=todos.find(x=>x.pedido===p.pedido);
-  if(orig){orig.estadoCRM=estado;orig.notasInt=notas;}
-  render(); toast('✓ Estado CRM actualizado: '+estado); closeModal();
-}
-function quickCRM(i,val){
-  filtrados[i].estadoCRM=val;
-  const orig=todos.find(x=>x.pedido===filtrados[i].pedido);
-  if(orig)orig.estadoCRM=val;
-  toast('✓ '+filtrados[i].pedido+' → '+val); render();
+
+  try{
+    await actualizarCRMRemoto(p.pedido, estado, notas);
+    p.estadoCRM=estado;
+    p.notasInt=notas;
+    const orig=todos.find(x=>x.pedido===p.pedido);
+    if(orig){
+      orig.estadoCRM=estado;
+      orig.notasInt=notas;
+    }
+    render();
+    toast('✓ Guardado en Google Sheets');
+    closeModal();
+  }catch(e){
+    toast('Error: ' + e.message);
+  }
 }
 
-// ── GRÁFICAS ────────────────────────────────────────────────
+async function quickCRM(i,val){
+  const p=filtrados[i];
+  const notas=p.notasInt||'';
+
+  try{
+    await actualizarCRMRemoto(p.pedido, val, notas);
+    p.estadoCRM=val;
+    const orig=todos.find(x=>x.pedido===p.pedido);
+    if(orig)orig.estadoCRM=val;
+    filtrar();
+    toast('✓ Guardado en Google Sheets');
+  }catch(e){
+    toast('Error: ' + e.message);
+    render();
+  }
+}
+
 function renderGraficas(){
   if(!todos.length)return;
 
-  // Ingresos por mes
   const byMonth={};
   todos.forEach(p=>{
     const f=p.fecha||'';
@@ -764,7 +767,6 @@ function renderGraficas(){
     }
   });
 
-  // Donut estados
   const estados={};
   todos.forEach(p=>{estados[p.estadoWoo]=(estados[p.estadoWoo]||0)+1;});
   const eLabels=Object.keys(estados);
@@ -779,14 +781,12 @@ function renderGraficas(){
     options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.parsed+' pedidos'}}}}
   });
 
-  // Leyenda
   document.getElementById('legend').innerHTML=eLabels.map((l,i)=>
     `<div class="legend-item">
       <div class="legend-left"><div class="legend-dot" style="background:${cols[i]}"></div>${l}</div>
       <span class="legend-val">${eVals[i]}</span>
     </div>`).join('');
 
-  // Line - pedidos por día (últimos 30)
   const byDay={};
   const hoy=new Date();
   for(let i=29;i>=0;i--){
@@ -828,7 +828,6 @@ function renderGraficas(){
   });
 }
 
-// ── PDF INDIVIDUAL ──────────────────────────────────────────
 function imprimirPedido(){
   if(editIdx===null)return;
   const p=filtrados[editIdx];
@@ -837,14 +836,12 @@ function imprimirPedido(){
   setTimeout(()=>window.print(),350);
 }
 
-// ── PDF HOJA ────────────────────────────────────────────────
 function exportarPDFHoja(){
   if(!filtrados.length){toast('Sin pedidos que exportar');return;}
   document.getElementById('print-area').innerHTML=buildPDF(filtrados,true);
   setTimeout(()=>window.print(),350);
 }
 
-// ── CONSTRUCTOR PDF ─────────────────────────────────────────
 function buildPDF(lista,multi){
   const now=new Date().toLocaleString('es-MX');
   const css=`<style>
